@@ -28,7 +28,7 @@ end
 
 @views function LA.eigvals!(A::SkewHermitian{<:Complex}, irange::UnitRange)
     H = Hermitian(A.data.*1im)
-    vals = eigvals!(H,-irange)
+    vals = eigvals!(H,-irange) # holzhammer!
     vals .= .-vals
     return complex.(0, vals)
 end
@@ -79,7 +79,7 @@ end
     end
     tau, E = skewblockedhess!(S)
     Tr = SkewHermTridiagonal(E)
-    H1 = Hessenberg{typeof(zero(eltype(S.data))),typeof(Tr),typeof(S.data),typeof(tau),typeof(false)}(Tr, 'L', S.data, tau, false)   
+    H1 = Hessenberg{typeof(zero(eltype(S.data))),typeof(Tr),typeof(S.data),typeof(tau),typeof(false)}(Tr, 'L', S.data, tau, false)
     vectorsreal = similar(S, T, n, n)
     vectorsim = similar(S, T, n, n)
     Q = Matrix(H1.Q)
@@ -142,3 +142,16 @@ end
 end
 
 LA.svd(A::SkewHermitian{<:Real}) = svd!(copyeigtype(A))
+
+## TODO  eigvals! and eigen[!]
+function eigvals2(A::SkewHermTridiagonal{T}) where T
+    ev = [A.ev[i] * (-1)^i for i = axes(A.ev, 1)] # for complex T cumprod sign * (-1)^i
+    dv = A.dvim === nothing ? zeros(T, size(A, 1)) : A.dvim
+    B = SymTridiagonal(dv, real.(ev))
+    complex.(0, eigvals(B))
+end
+
+function eigvals2(A::SkewHermitian{T}) where T
+    H = hessenberg(A)
+    eigvals2(H.H)
+end
