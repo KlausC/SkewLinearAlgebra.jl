@@ -220,7 +220,7 @@ end
             @test exp(log(A)) ≈ A
         end
         if issuccess(lu(cos(B), check = false)) && issuccess(lu(det(exp(2A)+I), check = false))
-            if isapproxskewhermitian(tan(B)) && isapproxskewhermitian(tanh(B)) 
+            if isapproxskewhermitian(tan(B)) && isapproxskewhermitian(tanh(B))
                 @test tan(B) ≈ tan(A)
                 @test tanh(B) ≈ tanh(A)
             end
@@ -259,7 +259,7 @@ end
             @test exp(log(A)) ≈ A
         end
         if issuccess(lu(cos(B), check = false)) && issuccess(lu(det(exp(2A)+I), check = false))
-            if isapproxskewhermitian(tan(B)) && isapproxskewhermitian(tanh(B)) 
+            if isapproxskewhermitian(tan(B)) && isapproxskewhermitian(tanh(B))
                 @test tan(B) ≈ tan(A)
                 @test tanh(B) ≈ tanh(A)
             end
@@ -450,3 +450,11 @@ end
     @test repr("text/plain", JMatrix(4)) == "4×4 JMatrix{Int8, 1}:\n  ⋅  1   ⋅  ⋅\n -1  ⋅   ⋅  ⋅\n  ⋅  ⋅   ⋅  1\n  ⋅  ⋅  -1  ⋅"
 end
 
+@testset "eigvals" begin
+@testset "eigvals robustness $ev" for ev in ([0,0,0], [1,2,3,2,1], [0,1,0], [1,0,0], [1,0,1], [1,1,0], [0,1,1], [0,0,1], [1,1,1],[1,1,0,1,1])
+    A = SkewHermTridiagonal(float.(ev))
+    a = sort(eigvals(A), by = imag)
+    b = sort(eigvals(im * Matrix(A)) / im, by = imag)
+    @test a ≈ b
+end
+end
