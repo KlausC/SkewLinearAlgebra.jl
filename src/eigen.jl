@@ -143,14 +143,17 @@ end
 
 LA.svd(A::SkewHermitian{<:Real}) = svd!(copyeigtype(A))
 
-## TODO  eigvals! and eigen[!]
-function eigvals2(A::SkewHermTridiagonal{T}) where T
+## TODO  skewtrieigvals_merge!, irange, vl,vh
+function skewtrieigvals(A::SkewHermTridiagonal{T}) where T
+    skewtrieigvals!(copyeigtype(A))
+end
+function skewtrieigvals!(A::SkewHermTridiagonal{T}) where T
     R = real(T)
     n = size(A, 1)
     ev = [A.ev[i] * (-1)^i for i = 1:n-1] # for complex T cumprod sign * (-1)^i
     dv = A.dvim === nothing ? zeros(R, n) : A.dvim
     B = SymTridiagonal(dv, real.(ev))
-    e = sort!(eigvals(B))
+    e = sort!(eigvals!(B))
     for i = 1:n÷2
         e[i] -= (e[i] + e[n-i+1]) / R(2)
         e[n-i+1] = -e[i]
@@ -158,7 +161,7 @@ function eigvals2(A::SkewHermTridiagonal{T}) where T
     if isodd(n)
         e[n÷2+1] = R(0)
     end
-    complex.(R(0), e)
+    complex.(0, e)
 end
 
 function eigvals2(A::SkewHermitian{T}) where T

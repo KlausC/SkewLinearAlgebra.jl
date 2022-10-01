@@ -82,7 +82,7 @@ end
         x1 = - α * α - β * β + shift
         x2 = - α * bulge + β * γ
         c, s = ((iszero(x1) && iszero(x2)) ? getgivens(α,bulge) : getgivens(x1, x2))
-          
+
         if i > 1
             ev[i-1] = c * α + s * bulge
         end
@@ -99,7 +99,7 @@ end
     return
 end
 
-@views function skewtrieigvals!(A::SkewHermTridiagonal{T,V,Vim}) where {T<:Real,V<:AbstractVector{T},Vim<:Nothing}
+@views function skewtrieigvals_old!(A::SkewHermTridiagonal{T,V,Vim}) where {T<:Real,V<:AbstractVector{T},Vim<:Nothing}
     n = size(A, 1)
     values = complex(zeros(T, n))
     ev = A.ev
