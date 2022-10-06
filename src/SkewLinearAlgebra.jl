@@ -22,18 +22,17 @@ export
     logabspfaffian,
     logabspfaffian!,
     skewchol,
-    skewchol!
+    skewchol!,
+    imzd, imzd!
 
 include("skewhermitian.jl")
 include("tridiag.jl")
 include("jmatrix.jl")
 include("hessenberg.jl")
 include("skeweigen.jl")
+include("imzd.jl")
 include("eigen.jl")
 include("exp.jl")
 include("cholesky.jl")
 include("pfaffian.jl")
 end
-
-
-
