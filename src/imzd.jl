@@ -96,25 +96,20 @@ function imzd!(E::AbstractVector{T}, SKEW::Bool, Z::Union{Nothing,AbstractMatrix
     ONE = one(T)
 
     if MATZ
-        #
+        LinearAlgebra.checksquare(Z)
+        size(Z, 1) == N || throw(DimensionMismatch("matrix vs. eigenvectors"))
         # *** PLACE IDENTITY MATRIX IN Z
-        #
-        for I = 1:N
-            for J = 1:N
-                Z[I, J] = ZERO
-            end
-            Z[I, I] = ONE
+        for I = 1:N, J = 1:N
+            Z[I, J] = ifelse(I == J, ONE, ZERO)
         end
     end
     M = N
     E[1] = ZERO
     ITS = 0
-    #
+
     while M >= 2 && IERR == 0
         M0 = M
-        #
         # *** SEARCH FOR NEXT SUBMATRIX TO SOLVE  (MATRIX SPLITTING)
-        #
         F = ZERO
         L0 = 2
         for J = M-1:-1:1
@@ -127,30 +122,25 @@ function imzd!(E::AbstractVector{T}, SKEW::Bool, Z::Union{Nothing,AbstractMatrix
             end
             F = G
         end
-        L0-1 == M && @goto CONVERGED
+        L0 - 1 == M && @goto CONVERGED
         if MATZ && SKEW
-            #
             # *** PLACE CORRECT SIGN ON IDENTITY DIAGONALS
-            #
             for I = L0-1:4:M
                 Z[I, I] = -Z[I, I]
-                IP3 = I + 3
-                IP3 > M && break
-                Z[IP3, IP3] = -Z[IP3, IP3]
+                if I+3 <= M
+                    Z[I+3, I+3] = -Z[I+3, I+3]
+                end
             end
         end
         L0 == M && @goto CONVERGED
         L = L0
         iseven(M - L0) && @goto L230
-        #
         # *** FIND ZERO EIGENVALUE OF ODD ORDERED SUBMATRICES
-        #
         C = ZERO
         S = -ONE
         for K = M-1:-2:L0
-            KP1 = K + 1
-            Q = -S * E[KP1]
-            E[KP1] = C * E[KP1]
+            Q = -S * E[K+1]
+            E[K+1] = C * E[K+1]
             if abs(E[K]) <= abs(Q)
                 C = E[K] / Q
                 R = sqrt(C * C + ONE)
@@ -165,26 +155,20 @@ function imzd!(E::AbstractVector{T}, SKEW::Bool, Z::Union{Nothing,AbstractMatrix
                 S = S * C
             end
             if MATZ
-                #
                 # *** ACCUMULATE TRANSFORMATIONS FOR EIGENVECTORS
-                #
-                KM1 = K - 1
-                Z[KM1, M] = -S * Z[KM1, KM1]
-                Z[KM1, KM1] = C * Z[KM1, KM1]
-                for J = KP1:2:M
-                    Z[J, KM1] = S * Z[J, M]
+                Z[K-1, M] = -S * Z[K-1, K-1]
+                Z[K-1, K-1] = C * Z[K-1, K-1]
+                for J = K+1:2:M
+                    Z[J, K-1] = S * Z[J, M]
                     Z[J, M] = C * Z[J, M]
                 end
             end
-            #
         end
         M = M - 1
         L0 == M && @goto CONVERGED
         @label L200
         while true
-            #
             # *** CHECK FOR CONVERGENCE OR SMALL SUBDIAGONAL ELEMENT
-            #
             L = L0
             for K = M-1:-2:L0
                 TMAG = abs(E[K+1]) + abs(E[K-1])
@@ -199,15 +183,11 @@ function imzd!(E::AbstractVector{T}, SKEW::Bool, Z::Union{Nothing,AbstractMatrix
             @label L230
             ITS = ITS + 1
             if ITS > 300
-                #
                 # *** ERROR EXIT
-                #
                 IERR = M
                 break
             end
-            #
             # *** FORM SHIFT
-            #
             F = E[M-3]
             G = E[M-2]
             C = E[M-1]
@@ -217,10 +197,8 @@ function imzd!(E::AbstractVector{T}, SKEW::Bool, Z::Union{Nothing,AbstractMatrix
             Q = (G / (P + copysign(R, P))) - C
             F = E[L]
             E[L-1] = ((F - S) * (F + S) + C * Q) / F
-            #
             # *** PERFORM ONE IMPLICIT QR ITERATION ON CHOLESKY FACTOR
-            #
-            LS = L0-1
+            LS = L0 - 1
             C = ONE
             S = ONE
             for I = L:M-1
@@ -242,33 +220,27 @@ function imzd!(E::AbstractVector{T}, SKEW::Bool, Z::Union{Nothing,AbstractMatrix
                 F = E[I+1]
                 E[I+1] = -S * E[I] + C * F
                 E[I] = C * E[I] + S * F
-                #
                 # *** ACCUMULATE TRANSFORMATIONS FOR EIGENVECTORS
-                #
                 if MATZ
                     for J = LS:2:M0
                         F = Z[J, I+1]
                         Z[J, I+1] = -S * Z[J, I-1] + C * F
                         Z[J, I-1] = C * Z[J, I-1] + S * F
                     end
-                    LS = LS == L0-1 ? L0 : L0-1
+                    LS = LS == L0 - 1 ? L0 : L0 - 1
                 end
             end
             E[L-1] = ZERO
         end
         @label CONVERGED
-        println("converged $ITS $L0:$M, $(E[max(1,L0-2, M-4):M])")
+        ## println("converged $ITS $L0:$M, $(E[max(1, L0-2, M-4):M])")
         ITS = 0
-        #
-        # *** ITERATION CONVERGED TO ONE ZERO EIGENVALUE
-        #
         if L0 - 1 == M
+            # *** ITERATION CONVERGED TO ONE ZERO EIGENVALUE
             E[M] = ZERO
             M = M - 1
         else
-            #
             # *** ITERATION CONVERGED TO EIGENVALUE PAIR
-            #
             while true
                 E[M-1] = E[M]
                 E[M] = -E[M]
@@ -279,20 +251,17 @@ function imzd!(E::AbstractVector{T}, SKEW::Bool, Z::Union{Nothing,AbstractMatrix
 
         M > L0 && @goto L200
         if MATZ && !SKEW
-            #
             # *** COMPUTE EIGENVECTORS FROM ORTHONORMAL COLUMNS OF Z IF NOT SKEW
-            #
             K = M0
-            while K >= L0-1
+            while K >= L0 - 1
                 if E[K] != ZERO
-                    KM1 = K - 1
                     for J = L0-1:2:M0
-                        Z[J, K] = Z[J, KM1]
+                        Z[J, K] = Z[J, K-1]
                         F = Z[J+1, K]
-                        Z[J+1, KM1] = F
+                        Z[J+1, K-1] = F
                         Z[J+1, K] = -F
                     end
-                    K = KM1
+                    K = K-1
                 end
                 K = K - 1
             end

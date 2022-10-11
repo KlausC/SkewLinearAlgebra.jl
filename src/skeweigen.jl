@@ -82,7 +82,7 @@ end
         x1 = - α * α - β * β + shift
         x2 = - α * bulge + β * γ
         c, s = ((iszero(x1) && iszero(x2)) ? getgivens(α,bulge) : getgivens(x1, x2))
-          
+
         if i > 1
             ev[i-1] = c * α + s * bulge
         end
@@ -99,35 +99,11 @@ end
     return
 end
 
-@views function skewtrieigvals!(A::SkewHermTridiagonal{T,V,Vim}) where {T<:Real,V<:AbstractVector{T},Vim<:Nothing}
-    n = size(A, 1)
-    values = complex(zeros(T, n))
-    ev = A.ev
-    if isodd(n)
-        n -= 1
-        Ginit = similar(A, T, n)
-        reducetozero(ev, Ginit, n)
-    end
-    tol = eps(T) * T(10)
-    max_iter = 30 * n
-    iter = 0 ;
-    N = n
-    while n > 2 && iter < max_iter
-        implicitstep_novec(ev, n - 1)
-        while n > 2 && abs(ev[n - 2]) <= tol * abs(ev[n - 1])
-            eigofblock(ev[n - 1], values[n-1:n] )
-            n -= 2
-        end
-        iter += 1
-    end
-    if n == 2
-        eigofblock(ev[1], values[1:2])
-        return values
-    elseif n == 0
-        return values
-    else
-        error("Maximum number of iterations reached, the algorithm didn't converge")
-    end
+function skewtrieigvals!(A::SkewHermTridiagonal{<:Real,V,Nothing}) where {V<:AbstractVector}
+    E = [0; A.ev]
+    ierr = imzd!(E, true, nothing)
+    ierr != 0 && error("imzd! failed at $ierr")
+    E
 end
 
 @views function implicitstep_vec!(ev::AbstractVector{T}, Qeven::AbstractMatrix{T}, Qodd::AbstractMatrix{T}, n::Integer, N::Integer) where T
